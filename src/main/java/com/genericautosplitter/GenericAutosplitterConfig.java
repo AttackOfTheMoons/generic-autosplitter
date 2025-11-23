@@ -1,11 +1,8 @@
 package com.genericautosplitter;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
-import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.*;
 
-@ConfigGroup("autosplitter")
+@ConfigGroup(GenericAutosplitterPlugin.AUTOSPLITTER_PLUGIN_NAME)
 public interface GenericAutosplitterConfig extends Config
 {
 	@ConfigItem(
@@ -18,10 +15,30 @@ public interface GenericAutosplitterConfig extends Config
 		return 16834;
 	}
 
+    @ConfigItem(
+            position = 1,
+            keyName = "startHotKey",
+            name = "Start Hotkey",
+            description = "Hotkey for sending a start to the LiveSplit server\nIt is recommended to unset this hotkey within LiveSplit"
+    )
+    default Keybind startHotKey() {
+        return Keybind.NOT_SET;
+    }
+
+    @ConfigItem(
+            position = 2,
+            keyName = "resetHotKey",
+            name = "Reset Hotkey",
+            description = "Hotkey for sending a reset to the LiveSplit server\nIt is recommended to unset this hotkey within LiveSplit"
+    )
+    default Keybind resetHotKey() {
+        return Keybind.NOT_SET;
+    }
+
 	@ConfigSection(
 			name = "Customization Instructions",
 			description = "Instructions",
-			position = 1
+			position = 3
 	)
 	String instructionsSection = "instructionsSect";
 
@@ -29,7 +46,7 @@ public interface GenericAutosplitterConfig extends Config
 			keyName = "instructions",
 			name = "Instructions",
 			description = "Instructions",
-			position = 1,
+			position = 3,
 			section = "instructionsSect"
 	)
 	default String instructions()

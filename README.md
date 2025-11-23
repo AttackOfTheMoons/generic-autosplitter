@@ -45,6 +45,14 @@ For example, to create a split on level up, use a game message alert with the bl
 
 Watchdog is very powerful, so be creative with your splits. Watchdog will not work in most PvM areas, at Jagex's request, so you would have to manually split if you wanted a split during a boss encounter (like Fight Caves).
 
+### List of supported methods:
+- `split`
+- `reset`
+- `start`
+- `undo`
+- `skip`
+- `end`
+- `pause`
 
 ---
 

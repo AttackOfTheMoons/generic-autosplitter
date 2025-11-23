@@ -8,18 +8,22 @@ import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.PluginMessage;
+import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.Locale;
 
 @Slf4j
 @PluginDescriptor(
@@ -28,15 +32,15 @@ import java.time.Instant;
 )
 public class GenericAutosplitterPlugin extends Plugin
 {
-	protected static final Logger logger = LoggerFactory.getLogger(GenericAutosplitterPlugin.class);
+    public static final String AUTOSPLITTER_PLUGIN_NAME = "autosplitter";
+    protected static final Logger logger = LoggerFactory.getLogger(GenericAutosplitterPlugin.class);
+    public static final String DURATION_KEY = "duration";
 
-	protected int ticks;
+    protected int ticks;
 	protected int offset;
 	protected boolean useOffset = false;
 
-	private int minutes = 0;
-
-	@Inject
+    @Inject
 	private Client client;
 
 	@Inject
@@ -47,6 +51,9 @@ public class GenericAutosplitterPlugin extends Plugin
 
 	@Inject
 	private ClientToolbar clientToolbar;
+
+    @Inject
+    private KeyManager keymanager;
 
 	// side panel
 	private NavigationButton navButton;
@@ -74,13 +81,16 @@ public class GenericAutosplitterPlugin extends Plugin
 				.icon(icon).priority(6).panel(panel).build();
 		clientToolbar.addNavigation(navButton);
 		panel.startPanel();
+        keymanager.registerKeyListener(startHotkeyListener);
+        keymanager.registerKeyListener(resetHotkeyListener);
 	}
 
 	@Override
 	protected void shutDown() {
 		disconnect();
 		clientToolbar.removeNavigation(navButton);
-
+        keymanager.unregisterKeyListener(startHotkeyListener);
+        keymanager.unregisterKeyListener(resetHotkeyListener);
 	}
 
 	public void connect() {
@@ -123,7 +133,6 @@ public class GenericAutosplitterPlugin extends Plugin
 
 			if (lostTicks > ticksThisLogin) {
 				// Our tick count is off by more than 600ms
-				// logger.info("Should have been logged in for {} ticks, was actually {}", lostTicks, ticksThisLogin);
 				ticks += lostTicks - ticksThisLogin;
 				setTime();
 				before = now;
@@ -134,21 +143,37 @@ public class GenericAutosplitterPlugin extends Plugin
 
 	@Subscribe
 	public void onPluginMessage(PluginMessage event) {
-		if ("autosplitter".equalsIgnoreCase(event.getNamespace())) {
-			// String name = event.getName(); // in case more commands are needed in the future
-			split();
+		if (!AUTOSPLITTER_PLUGIN_NAME.equalsIgnoreCase(event.getNamespace())) {
+            // Ignore unrelated plugin messages.
+			return;
 		}
+        switch (event.getName().toLowerCase(Locale.ROOT)) {
+            case "split":
+                split();
+                break;
+            case "reset":
+                reset();
+                break;
+            case "start":
+                startRun();
+                break;
+            case "undo":
+                undo();
+                break;
+            case "skip":
+                skip();
+                break;
+            case "end":
+                endRun();
+                break;
+            case "pause":
+                pause();
+                break;
+            default:
+                // This line is left blank intentionally to ignore unsupported messages.
+                break;
+        }
 	}
-
-	/*
-	@Subscribe
-	public void onVarClientIntChanged(VarClientIntChanged event) {
-		if (client.getVarcIntValue(526) > minutes) {
-			minutes = client.getVarcIntValue(526);
-			logger.info("New time is " + minutes + " at tick " + ticks);
-		}
-	}
- 	*/
 
 	@Subscribe
 	private void onGameStateChanged(GameStateChanged event) {
@@ -163,16 +188,8 @@ public class GenericAutosplitterPlugin extends Plugin
 				// figure out how many GameTick events we lost, round it down, and add it to total
 				// bug: sometimes off by 1, maybe just server lag
 				int lostTicks = (int) Math.floor((now - before) / (1000.0f * 0.6f));
-				// logger.info("Giving a {}t adjustment", lostTicks);
 				ticks += lostTicks;
 			}
-
-			/* debug */
-
-			// long duration = now - before;
-			// float decimal = duration / 1000.0f;
-			// logger.info("[{}t | {}s] {}", (decimal / 0.6f), decimal, lastState);
-			/* end debug */
 
 			if (state == GameState.HOPPING || state == GameState.LOGIN_SCREEN) {
 				// adjustment makes timer more accurate, idk why
@@ -295,16 +312,28 @@ public class GenericAutosplitterPlugin extends Plugin
 	}
 
 	private void saveTime(int duration) {
-		// logger.info("Saving time " + duration);
-		configManager.setRSProfileConfiguration("autosplitter", "duration", duration);
+		configManager.setRSProfileConfiguration(AUTOSPLITTER_PLUGIN_NAME, DURATION_KEY, duration);
 	}
 
 	private int loadTime() {
 		try {
-			int time = Integer.parseInt(configManager.getRSProfileConfiguration("autosplitter", "duration"));
-			return time;
+            return Integer.parseInt(configManager.getRSProfileConfiguration(AUTOSPLITTER_PLUGIN_NAME, "duration"));
 		} catch (Exception e) {
 			return getTimePlayed() * 100;
 		}
 	}
+
+    private final HotkeyListener startHotkeyListener = new HotkeyListener(() -> config.startHotKey()) {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            startRun();
+        }
+    };
+
+    private final HotkeyListener resetHotkeyListener = new HotkeyListener(() -> config.resetHotKey()) {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            reset();
+        }
+    };
 }
