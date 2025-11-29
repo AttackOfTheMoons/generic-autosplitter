@@ -325,14 +325,14 @@ public class GenericAutosplitterPlugin extends Plugin
 
     private final HotkeyListener startHotkeyListener = new HotkeyListener(() -> config.startHotKey()) {
         @Override
-        public void keyPressed(KeyEvent e) {
+        public void hotkeyPressed() {
             startRun();
         }
     };
 
     private final HotkeyListener resetHotkeyListener = new HotkeyListener(() -> config.resetHotKey()) {
         @Override
-        public void keyPressed(KeyEvent e) {
+        public void hotkeyPressed() {
             reset();
         }
     };
